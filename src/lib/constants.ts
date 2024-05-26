@@ -1,0 +1,7 @@
+export enum ACTIONS {
+  'SELECT' = 'SELECT',
+  'RECTANGLE' = 'RECTANGLE',
+  'CIRCLE' = 'CIRCLE',
+  'ARROW' = 'ARROW',
+  'FREEHAND' = 'FREEHAND'
+}
