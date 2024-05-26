@@ -3,5 +3,6 @@ export enum ACTIONS {
   'RECTANGLE' = 'RECTANGLE',
   'CIRCLE' = 'CIRCLE',
   'ARROW' = 'ARROW',
-  'FREEHAND' = 'FREEHAND'
+  'FREEHAND' = 'FREEHAND',
+  'BRUSH' = 'BRUSH'
 }

@@ -6,14 +6,16 @@ import {
   CircleIcon,
   Pencil1Icon,
   ArrowRightIcon,
-  DownloadIcon
+  DownloadIcon,
+  MarginIcon
 } from '@radix-ui/react-icons'
-import { ReactNode, useRef, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import Konva from 'konva'
 import {
   Arrow,
   Circle,
+  Image,
   Layer,
   Line,
   Rect,
@@ -75,20 +77,48 @@ type FreeDraw = {
   fillColor: string
 }
 
+type BrushImage = {
+  id: string
+  x: number
+  y: number
+  image: HTMLCanvasElement
+}
+
 function App() {
   const stageRef = useRef<Konva.Stage>(null)
   const transformerRef = useRef<Konva.Transformer>(null!)
   const currentShapeId = useRef<string>()
   const [action, setAction] = useState(ACTIONS.SELECT)
+  const [strokeWidth, setStrokeWidth] = useState(0)
   const [fillColor, setFillColor] = useState('#ff0000')
 
   const [rectangles, setRectangles] = useState<Rectangle[]>([])
   const [circles, setCircles] = useState<Cricle[]>([])
   const [arrows, setArrows] = useState<Arrow[]>([])
   const [freeDraws, setFreeDraws] = useState<FreeDraw[]>([])
+  const [brushImages, setBrushImages] = useState<BrushImage[]>([])
 
   const isDrawing = useRef(false)
   const isDraggable = action === ACTIONS.SELECT
+
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const stage = stageRef.current
+    if (stage) {
+      stage.container().style.cursor = 'none' // Hide default cursor
+      const handleMouseMove = (e: MouseEvent) => {
+        setMousePos({
+          x: e.clientX - stage.container().getBoundingClientRect().left,
+          y: e.clientY - stage.container().getBoundingClientRect().top
+        })
+      }
+      stage.container().addEventListener('mousemove', handleMouseMove)
+      return () => {
+        stage.container().removeEventListener('mousemove', handleMouseMove)
+      }
+    }
+  }, [])
 
   const handlePointerDown = () => {
     if (action === ACTIONS.SELECT) return
@@ -115,7 +145,6 @@ function App() {
           }
         ])
         break
-
       case ACTIONS.CIRCLE:
         setCircles((circles) => [
           ...circles,
@@ -147,6 +176,31 @@ function App() {
             fillColor
           }
         ])
+        break
+      case ACTIONS.BRUSH:
+        {
+          const canvas = document.createElement('canvas')
+          canvas.width = stage.width()
+          canvas.height = stage.height()
+
+          setBrushImages((images) => [
+            ...images,
+            {
+              id,
+              x,
+              y,
+              image: canvas
+            }
+          ])
+
+          const context = canvas.getContext('2d')!
+          context.strokeStyle = '#df4b26'
+          context.lineJoin = 'round'
+          context.lineWidth = 5
+
+          console.log(999999, context)
+        }
+
         break
       default:
         break
@@ -215,7 +269,20 @@ function App() {
             return draw
           })
         })
-
+        break
+      case ACTIONS.BRUSH:
+        setBrushImages((images) => {
+          return images.map((image) => {
+            if (image.id === currentShapeId.current) {
+              return {
+                ...image,
+                x,
+                y
+              }
+            }
+            return image
+          })
+        })
         break
       default:
         break
@@ -265,6 +332,12 @@ function App() {
         >
           <Pencil1Icon />
         </ActionButton>
+        <ActionButton
+          active={action === ACTIONS.BRUSH}
+          onClick={() => setAction(ACTIONS.BRUSH)}
+        >
+          <MarginIcon />
+        </ActionButton>
         <ActionButton>
           <input
             type='color'
@@ -297,6 +370,7 @@ function App() {
               transformerRef.current?.nodes([])
             }}
           />
+
           {rectangles.map((rectangle, idx) => (
             <Rect
               key={idx}
@@ -341,12 +415,31 @@ function App() {
               lineCap='round'
               lineJoin='round'
               points={draw.points}
-              strokeWidth={2}
+              strokeWidth={strokeWidth}
               stroke={draw.fillColor}
               draggable={isDraggable}
               onClick={handleClick}
             />
           ))}
+          {brushImages.map((image) => (
+            <Image
+              alt='xx'
+              key={image.id}
+              x={image.x}
+              y={image.y}
+              image={image.image}
+            />
+          ))}
+          {action === ACTIONS.BRUSH && (
+            <Circle
+              x={mousePos.x}
+              y={mousePos.y}
+              radius={10}
+              fill='blue'
+              listening={false} // Make the circle non-interactive
+            />
+          )}
+
           <Transformer ref={transformerRef} />
         </Layer>
       </Stage>
